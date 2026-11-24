@@ -11,6 +11,8 @@ void usage(const char *program_name) {
   printf("Flags:\n");
   printf("    -B         ---        Force re-building\n");
   printf("    -g         ---        Include debug information\n");
+  printf("    -optimized ---        Make optimized release build, alias: '-O'\n");
+  printf("    --help     ---        Displa this help message, alias: '-h'\n");
 }
 
 void cc_debug_info(Cmd *cmd) {
