@@ -420,6 +420,9 @@ void print_usage();
 int main(int argc, char **argv) {
   program_name = shift(argv, argc);
 
+  server.port      = 8080;
+  server.backlog_n = 10;
+
   struct sigaction action = {0};
   action.sa_handler = handle_sigint;
   sigemptyset(&action.sa_mask);
@@ -442,8 +445,12 @@ int main(int argc, char **argv) {
       }
 
       arg = shift(argv, argc);
-      server.backlog_n = (int)strtol(arg, NULL, 0);
-      if (server.backlog_n <= 0) server.backlog_n = 10;
+      int backlog_n = (int)strtol(arg, NULL, 0);
+      if (backlog_n <= 0) {
+        log_error("Invalid backlog given, defaulting to %d", server.backlog_n);
+      } else {
+        server.backlog_n = backlog_n;
+      }
       continue;
     }
 
@@ -454,8 +461,12 @@ int main(int argc, char **argv) {
       }
 
       arg = shift(argv, argc);
-      server.port = (uint16_t)strtoul(arg, NULL, 0);
-      if (server.port == 0) server.port = 8080;
+      uint16_t port = (uint16_t)strtoul(arg, NULL, 0);
+      if (server.port == 0) {
+        log_error("Invalid port provided defaulting to %u", server.port);
+      } else {
+        server.port = port;
+      }
       continue;
     }
 
@@ -582,8 +593,10 @@ defer:
 }
 
 void print_usage() {
-  printf("Usage: %s [FLAGS]\n", program_name);
+  printf("Usage: %s [FLAGS] [<folder-to-serve>]\n", program_name);
   printf("FLAGS:\n");
+  printf("    -p <port-number> ----    Pick port for server to use (default: 8080)\n");
+  printf("    -backlog <count> ----    List amount of backlog connections server can have (default: 10)\n");
   printf("    -h,--help        ----    Print this help message\n");
 }
 
