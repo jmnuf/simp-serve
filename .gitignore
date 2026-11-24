@@ -1,0 +1,12 @@
+
+build/
+.local/
+
+nob
+TAGS
+
+*.old
+*.o
+*.obj
+*.exe
+

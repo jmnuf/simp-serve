@@ -1,0 +1,97 @@
+#define NOB_IMPLEMENTATION
+#include "nob.h"
+
+#define BUILD_FOLDER "./build/"
+
+Cmd cmd = {0};
+
+void usage(const char *program_name) {
+  printf("Usage: %s [FLAGS] [run [..RUN_ARGS]]\n", program_name);
+  printf("    run        ---        Run built executable\n");
+  printf("Flags:\n");
+  printf("    -B         ---        Force re-building\n");
+  printf("    -g         ---        Include debug information\n");
+}
+
+void cc_debug_info(Cmd *cmd) {
+#if defined(_MSC_VER) && !defined(__clang__)
+  cmd_append(cmd, "/DEBUG");
+#else
+  cmd_append(cmd, "-ggdb");
+#endif
+}
+
+
+int main(int argc, char **argv) {
+  NOB_GO_REBUILD_URSELF(argc, argv);
+  const char *program_name = shift(argv, argc);
+
+  bool should_run = false;
+  bool force_rebuild = false;
+  bool with_debug_info = false;
+  bool optimized = false;
+  while (argc > 0) {
+    const char *arg = shift(argv, argc);
+
+    if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
+      usage(program_name);
+      return 0;
+    }
+
+    if (strcmp(arg, "-B") == 0) {
+      force_rebuild = true;
+      continue;
+    }
+
+    if (strcmp(arg, "-g") == 0) {
+      with_debug_info = true;
+      continue;
+    }
+
+    if (strcmp(arg, "-O") == 0 || strcmp(arg, "-optimized") == 0) {
+      optimized = true;
+      continue;
+    }
+
+    if (strcmp(arg, "run") == 0) {
+      should_run = true;
+      break;
+    }
+
+    nob_log(WARNING, "Unknown argument, ignoring it: '%s'", arg);
+  }
+
+  if (!mkdir_if_not_exists(BUILD_FOLDER)) return 1;
+
+  const char *output_path = BUILD_FOLDER"simpserve";
+  if (with_debug_info) {
+    output_path = temp_sprintf("%s.debug", output_path);
+  } else if (!optimized) {
+    output_path = temp_sprintf("%s.test", output_path);
+  }
+  if (force_rebuild || needs_rebuild1(output_path, "main.c")) {
+    nob_cc(&cmd);
+    nob_cc_flags(&cmd);
+    nob_cc_output(&cmd, output_path);
+
+    nob_cc_inputs(&cmd, "main.c");
+
+    if (optimized) cmd_append(&cmd, "-O3");
+    if (with_debug_info) cc_debug_info(&cmd);
+
+    if (!cmd_run(&cmd)) return 1;
+  }
+  nob_log(INFO, "Unit %s is up to date", output_path);
+
+  if (should_run) {
+    cmd_append(&cmd, output_path);
+    for (size_t i = 0; i < argc; ++i) {
+      cmd_append(&cmd, argv[i]);
+    }
+
+    cmd_run(&cmd); // Build system doesn't care about executable failure. Nob will log run failure anyways
+  }
+
+  return 0;
+}
+
